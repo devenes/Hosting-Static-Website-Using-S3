@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: new bucket
+Resources:
+  generatedBucket:
+    Type: AWS::S3::Bucket
+
+  ###########
+  # awsstudent user & policy for Cloud9 in Vocareum
+  ###########
+  IAMUser:
+    Type: "AWS::IAM::User"
+    Properties:
+      UserName: awsstudent
+
+  IAMPolicy:
+    Type: "AWS::IAM::ManagedPolicy"
+    DependsOn: IAMUser
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          [
+            {
+              "Sid": "StudentAllowPolicy",
+              "Action":
+                [
+                  "cloudformation:List*",
+                  "cloudformation:Describe*",
+                  "cloudformation:Detect*",
+                  "cloudformation:EstimateTemplateCost",
+                  "cloudformation:Get*",
+                  "iam:Get*",
+                  "iam:List*",
+                  "kms:List*",
+                  "kms:Describe*",
+                  "cloudwatch:Describe*",
+                  "cloudwatch:Get*",
+                  "cloudwatch:List*",
+                  "s3:Put*",
+                  "s3:Get*",
+                  "s3:Create*",
+                  "s3:Replicate*",
+                  "s3:Delete*",
+                  "s3:*Bucket*",
+                  "s3:List*",
+                  "s3:*Job*",
+                  "s3:ReplicateTags",
+                  "s3:RestoreObject",
+                  "s3:AbortMultipartUpload",
+                ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            {
+              "Sid": "StudentDenyAllActions",
+              "Effect": "Deny",
+              "Action":
+                [
+                  "s3:*ObjectLegalHold",
+                  "s3:*ObjectRetention",
+                  "s3:*BucketObjectLock*",
+                ],
+              "Resource": "*",
+            },
+            {
+              "Sid": "ServiceLinkedRoleAndPolicies",
+              "Effect": "Allow",
+              "Action":
+                [
+                  "iam:AttachRolePolicy",
+                  "iam:CreateRole",
+                  "iam:CreateServiceLinkedRole",
+                  "iam:DetachRolePolicy",
+                  "iam:PassRole",
+                ],
+              "Resource": "*",
+              "Condition":
+                {
+                  "StringLikeIfExists":
+                    { "iam:AWSServiceName": "s3.amazonaws.com" },
+                },
+            },
+            {
+              "Sid": "AllowCloud9",
+              "Effect": "Allow",
+              "Action": "cloud9:CreateEnvironmentEC2",
+              "Resource": "arn:*:cloud9:*:*:environment:*",
+              "Condition":
+                {
+                  "StringEquals":
+                    {
+                      "cloud9:InstanceType":
+                        ["t2.small", "t3.small", "t2.micro"],
+                    },
+                },
+            },
+          ]
+      ManagedPolicyName: lab_policy
+      Users:
+        - awsstudent
+
+  IAMUserAccessKey:
+    Type: "AWS::IAM::AccessKey"
+    DependsOn: IAMUser
+    Properties:
+      Status: Active
+      UserName: awsstudent
+
+Outputs:
+  AccessKey:
+    Value:
+      Ref: IAMUserAccessKey
+
+  SecretKey:
+    Value:
+      "Fn::GetAtt":
+        - IAMUserAccessKey
+        - SecretAccessKey
